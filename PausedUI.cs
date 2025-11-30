@@ -11,6 +11,9 @@ public class PausedUI : MonoBehaviour
     [SerializeField] private Button settingsButton;
     [SerializeField] private Button restartButton;
     [SerializeField] private Button pauseButton;
+    [SerializeField] private GameObject settingsMenu;
+    [SerializeField] private Button settingsResumeButton;
+    [SerializeField] private Button settingsRestartButton;
 
     public event EventHandler onPause;
     public event EventHandler onResume;
@@ -29,14 +32,20 @@ public class PausedUI : MonoBehaviour
         if(settingsButton == null) Debug.LogError("Settings button not found");
         if(restartButton == null) Debug.LogError("Restart button not found");
         if(pauseButton == null) Debug.LogError("Pause button not found");
+        if(settingsResumeButton == null) Debug.LogError("Settings Resume button not found");
+        if(settingsRestartButton == null) Debug.LogError("Settings Restart button not found");
     }
     
     private void Start()
     {
         pauseMenu.SetActive(false);
+        settingsMenu.SetActive(false);
         restartButton.onClick.AddListener(RestartPressed);
         pauseButton.onClick.AddListener(PausePressed);
         resumeButton.onClick.AddListener(ResumePressed);
+        settingsButton.onClick.AddListener(SettingsPressed);
+        settingsResumeButton.onClick.AddListener(ResumePressed);
+        settingsRestartButton.onClick.AddListener(RestartPressed);
         if (Player.Instance != null)
         {
             Player.Instance.OnGameOver += Player_OnGameOver;
@@ -47,6 +56,12 @@ public class PausedUI : MonoBehaviour
             GameStateManager.Instance.OnGameLostFocus += GameStateManager_OnGameLostFocus;
         }
     }
+    
+    private void SettingsPressed()
+    {
+        pauseMenu.SetActive(false);
+        settingsMenu.SetActive(true);
+    }
 
     private void GameStateManager_OnGameLostFocus(object sender, EventArgs e)
     {
@@ -55,6 +70,7 @@ public class PausedUI : MonoBehaviour
 
     private void PausePressed()
     {
+        settingsMenu.SetActive(false);
         pauseMenu.SetActive(true);
         resumeButton.gameObject.SetActive(true);
         Time.timeScale = 0;
@@ -64,6 +80,7 @@ public class PausedUI : MonoBehaviour
     private void ResumePressed()
     {
         pauseMenu.SetActive(false);
+        settingsMenu.SetActive(false);
         Time.timeScale = 1;
         onResume?.Invoke(this, EventArgs.Empty);
     }
@@ -78,6 +95,7 @@ public class PausedUI : MonoBehaviour
         Loader.LoadScene(Loader.Scene.GameScene);
     }
 
+    
     private void OnDestroy()
     {
         resumeButton.onClick.RemoveListener(ResumePressed);
