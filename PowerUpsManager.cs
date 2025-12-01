@@ -21,8 +21,6 @@ public class PowerUpsManager : MonoBehaviour
     [SerializeField] private float levitationSpeed = 1f;
     private float _levitationTotalDuration;
     
-    [SerializeField] private float shieldDuration = 1f;
-    
     [Header("Increase/Decrease Speed Configuration")]
     [SerializeField] private float powerUpIncreaseSpeedAmount = 2f;
     [SerializeField] private float powerUpDecreaseSpeedAmount = 2f;
@@ -81,7 +79,7 @@ public class PowerUpsManager : MonoBehaviour
         if(Player.Instance != null)
             Player.Instance.OnPowerUpCollected += Player_OnPowerUpCollected;
         if(GameInput.Instance != null)
-            GameInput.Instance.OnSecondaryButtonPressed += GameInput_OnSecondaryButtonPressed;
+            GameInput.Instance.OnSwipeUp += GameInputOnSwipeUp;
         if (levitationImage == null) Debug.LogError("Levitation Image is not set in DifficultyManager");
         if (slowMotionImage == null) Debug.LogError("Slow Motion Image is not set in DifficultyManager");
         _levitationTotalDuration = levitationDuration + (2 * timeToLevitate);
@@ -97,8 +95,9 @@ public class PowerUpsManager : MonoBehaviour
     }
     
     
-    private void GameInput_OnSecondaryButtonPressed(object sender, EventArgs e)
+    private void GameInputOnSwipeUp(object sender, EventArgs e)
     {
+        if(GameStates.currentGameState != GameStates.GameState.InGame) return;
         if(_isPowerUpActive) return;
         switch (_currentPowerUp)
         {

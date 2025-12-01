@@ -5,6 +5,7 @@ using Random = UnityEngine.Random;
 public class SoundManager : MonoBehaviour
 {
     
+    public static SoundManager Instance {private set; get;}
     
     [SerializeField] private AudioClip[] coinSounds;
     [SerializeField] private AudioClip powerUpSound;
@@ -17,9 +18,37 @@ public class SoundManager : MonoBehaviour
     [SerializeField] private AudioClip levitateDownSound;
     
     
+    
+    private float _musicVolume;
+    private float _sfxVolume;
+    
+    private SoundSource _musicSoundSource;
+    private SoundSource _engineSoundSource;
+    
+    public event EventHandler<OnVolumeEventArgs> OnVolumeUpdate;
+
+    public class OnVolumeEventArgs : EventArgs
+    {
+        public float sfxVolume;
+        public float musicVolume;
+    }
+    
+    
     private void Awake()
     {
-       
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        
+        _sfxVolume = PlayerPrefs.HasKey(GameStates.SFX_VOLUME) ? PlayerPrefs.GetFloat(GameStates.SFX_VOLUME) : 1f;
+        _musicVolume = PlayerPrefs.HasKey(GameStates.MUSIC_VOLUME) ? PlayerPrefs.GetFloat(GameStates.MUSIC_VOLUME) : 1f;
+        
+        AudioListener.volume = 1f;
+        
     }
 
     private void Start()
@@ -40,6 +69,7 @@ public class SoundManager : MonoBehaviour
             Player.Instance.OnCoinCollected += Player_OnCoinCollected;
             Player.Instance.OnPowerUpCollected += Player_OnPowerUpCollected;
             Player.Instance.OnGameOver += Player_OnGameOver;
+            Player.Instance.OnPowerUpLevitatingDown += Player_OnLevitatingDown;
         }
 
         if (PowerUpsManager.Instance != null)
@@ -50,8 +80,10 @@ public class SoundManager : MonoBehaviour
 
         if (PausedUI.Instance != null)
         {
-            PausedUI.Instance.onPause += PausedUI_OnPause;
-            PausedUI.Instance.onResume += PausedUI_OnResume;
+            PausedUI.Instance.OnPause += PausedUI_OnPause;
+            PausedUI.Instance.OnResume += PausedUI_OnResume;
+            PausedUI.Instance.OnMusicChanged += PausedUI_OnMusicChanged;
+            PausedUI.Instance.OnSFXChanged += PausedUI_OnSFXChanged;
         }
 
         if (GameStateManager.Instance != null)
@@ -63,6 +95,25 @@ public class SoundManager : MonoBehaviour
         PlaySoundtrack();
         AudioListener.pause = false;
         AudioListener.volume = 1f;
+    }
+
+    private void Player_OnLevitatingDown(object sender, EventArgs e)
+    {
+        SoundSource audioSource = AudioPoolManager.Instance.GetObject();
+        audioSource.transform.SetParent(transform);
+        audioSource.PlayLongSound2D(levitateDownSound, _sfxVolume);
+        AudioPoolManager.Instance.ReturnObjectAfter(audioSource,  3f);
+    }
+
+
+    private void PausedUI_OnSFXChanged(object sender, EventArgs e)
+    {
+        ChangeSFXVolume();
+    }
+
+    private void PausedUI_OnMusicChanged(object sender, EventArgs e)
+    {
+        ChangeMusicVolume();
     }
 
     private void PausedUI_OnResume(object sender, EventArgs e)
@@ -87,24 +138,19 @@ public class SoundManager : MonoBehaviour
 
     private void PowerUpsManager_OnPowerUpLevitationActivated(object sender, PowerUpsManager.OnLevitationActivatedEventArgs e)
     {
-       StartCoroutine(PlayLevitation(e.levitationDuration));
-    }
-
-    private System.Collections.IEnumerator PlayLevitation(float levitationDuration)
-    {
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
-        audioSource.PlayLongSound2D(levitateUpSound);
-        yield return new WaitForSeconds(levitationDuration);
-        audioSource.PlayLongSound2D(levitateDownSound);
-        AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 4f);
+        audioSource.PlayLongSound2D(levitateUpSound, _sfxVolume);
+        AudioPoolManager.Instance.ReturnObjectAfter(audioSource, e.levitationDuration + 2f);
     }
+
+    
 
     private void PowerUpsManager_OnSlowMotionActivated(object sender, PowerUpsManager.OnSlowMotionActivatedEventArgs e)
     {
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
-        audioSource.PlayLongSound2D(slowMoSound);
+        audioSource.PlayLongSound2D(slowMoSound, _sfxVolume);
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource, e.slowMotionDuration + 2f);
     }
 
@@ -112,11 +158,11 @@ public class SoundManager : MonoBehaviour
     {
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
-        audioSource.PlaySound2D(gameOverSound);
+        audioSource.PlaySound2D(gameOverSound, _sfxVolume);
         
         SoundSource audioSource2 = AudioPoolManager.Instance.GetObject();
         audioSource2.transform.SetParent(transform);
-        audioSource2.PlaySound2D(explosionSound);
+        audioSource2.PlaySound2D(explosionSound, _sfxVolume);
         
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 2f);
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource2, 2f);
@@ -129,7 +175,7 @@ public class SoundManager : MonoBehaviour
         if(e.powerUpType == PowerUp.PowerUpType.IncreaseSpeed) audioSource.SetPitch(1f);
         if(e.powerUpType == PowerUp.PowerUpType.DecreaseSpeed) audioSource.SetPitch(0.6f);
         if(e.powerUpType == PowerUp.PowerUpType.SlowMotion) audioSource.SetPitch(0.8f);
-        audioSource.PlaySound2D(powerUpSound);
+        audioSource.PlaySound2D(powerUpSound, _sfxVolume);
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 1.5f);
     }
 
@@ -138,7 +184,7 @@ public class SoundManager : MonoBehaviour
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
         audioSource.SetPitch(0.7f);
-        audioSource.PlaySound2D(coinSounds[0]);
+        audioSource.PlaySound2D(coinSounds[0], _sfxVolume);
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 1.5f);
         //PlayRandomClip(coinSounds);
     }
@@ -149,7 +195,8 @@ public class SoundManager : MonoBehaviour
     {
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
-        audioSource.PlaySound2DLooped(engineSound);
+        _engineSoundSource = audioSource;
+        audioSource.PlaySound2DLooped(engineSound, _sfxVolume);
     }
 
    
@@ -158,7 +205,38 @@ public class SoundManager : MonoBehaviour
     {
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
-        audioSource.PlaySound2DLooped(soundtrack);
+        _musicSoundSource = audioSource;
+        audioSource.PlaySound2DLooped(soundtrack, _musicVolume);
+    }
+    
+    private void ChangeSFXVolume()
+    {
+        _sfxVolume += 0.1f;
+
+        if (_sfxVolume > 1f)
+        {
+            _sfxVolume = 0f;
+        }
+        _engineSoundSource.changeVolume(_sfxVolume);
+        OnVolumeUpdate?.Invoke(this, new OnVolumeEventArgs {musicVolume = _musicVolume * 10, sfxVolume = _sfxVolume * 10});
+        
+        PlayerPrefs.SetFloat(GameStates.SFX_VOLUME, _sfxVolume);
+        PlayerPrefs.Save();
+    }
+    
+    private void ChangeMusicVolume()
+    {
+        _musicVolume += 0.1f;
+
+        if (_musicVolume > 1f)
+        {
+            _musicVolume = 0f;
+        }
+        _musicSoundSource.changeVolume(_musicVolume);
+        OnVolumeUpdate?.Invoke(this, new OnVolumeEventArgs {musicVolume = _musicVolume * 10, sfxVolume = _sfxVolume * 10});
+
+        PlayerPrefs.SetFloat(GameStates.MUSIC_VOLUME, _musicVolume);
+        PlayerPrefs.Save();
     }
     
     
@@ -168,15 +246,19 @@ public class SoundManager : MonoBehaviour
         {
             Player.Instance.OnCoinCollected -= Player_OnCoinCollected;
             Player.Instance.OnPowerUpCollected -= Player_OnPowerUpCollected;
+            Player.Instance.OnGameOver -= Player_OnGameOver;
         }
         if(PowerUpsManager.Instance != null)
         {
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated -= PowerUpsManager_OnSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpLevitationActivated -= PowerUpsManager_OnPowerUpLevitationActivated;
         }
         if(PausedUI.Instance != null)
         {
-            PausedUI.Instance.onPause -= PausedUI_OnPause;
-            PausedUI.Instance.onResume -= PausedUI_OnResume;
+            PausedUI.Instance.OnPause -= PausedUI_OnPause;
+            PausedUI.Instance.OnResume -= PausedUI_OnResume;
+            PausedUI.Instance.OnMusicChanged -= PausedUI_OnMusicChanged;
+            PausedUI.Instance.OnSFXChanged -= PausedUI_OnSFXChanged;
         }
         if(GameStateManager.Instance != null)
         {

@@ -27,9 +27,22 @@ public class PowerUpsUI : MonoBehaviour
             PowerUpsManager.Instance.OnPowerUpSlowMotionCollected += DifficultyManagerOnPowerUpSlowMotionCollected;
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated += DifficultyManagerOnPowerUpSlowMotionActivated;
         }
+
+        if (Player.Instance != null)
+        {
+            Player.Instance.OnPowerUpLevitatingDown += Player_OnLevitatingDown;
+        }
         HideProgressCircle();
     }
-    
+
+    private void Player_OnLevitatingDown(object sender, EventArgs e)
+    {
+        _isLevitating = false;
+        HideProgressCircle();
+        ResetTimers();
+        ResetBools();
+    }
+
     private void Update()
     {
         if (_isLevitating)

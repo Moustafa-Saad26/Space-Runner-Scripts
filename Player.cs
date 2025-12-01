@@ -1,12 +1,14 @@
 using UnityEngine;
 using System;
+using Unity.Cinemachine;
+using Random = UnityEngine.Random;
 
 public class Player : MonoBehaviour
 {
     public static Player Instance {private set; get;}
     
-    [Header("Starting Speed")]
-    [SerializeField] private float moveSpeed = 3f;
+    
+    private float _moveSpeed;
     
     [SerializeField] private float changeLaneSpeed = 5f;
     
@@ -16,12 +18,27 @@ public class Player : MonoBehaviour
     private readonly float[] _lanePositions = {8f, 0, -8f};
     private float _laneChangeTimer;
     private float _baseY;
+    private bool _isLevitatingUp;
+    private bool _isLevitating;
+    private bool _isLevitatingDown;
+    
+    [SerializeField] private float driftSpeed = 0.6f;
+    [SerializeField] private float driftRange = 10f;
+    [SerializeField] private float rotateSpeed = 30f;
+    [SerializeField] private float floatDuration = 20f;
+    private Vector3 _startPos;
+    private float _seedX;
+    private float _seedY;
+
+
 
     public event EventHandler OnGameOver;
     public event EventHandler OnSpawnTriggered;
     public event EventHandler OnDespawnTriggered;
     public event EventHandler<OnCoinCollectedEventArgs> OnCoinCollected;
     public event EventHandler<OnPowerUpCollectedEventArgs> OnPowerUpCollected;
+    public event EventHandler OnPowerUpLevitatingDown;
+
 
     public class OnPowerUpCollectedEventArgs : EventArgs
     {
@@ -41,6 +58,8 @@ public class Player : MonoBehaviour
             return;
         }
         Instance = this;
+        
+
     }
 
     void Start()
@@ -50,7 +69,10 @@ public class Player : MonoBehaviour
         _canMove = true;
         _currentLane = 1; // Start in MiddleLane
         if(GameInput.Instance != null)
+        {
             GameInput.Instance.OnInputPressed += GameInput_OnInputPressed;
+            GameInput.Instance.OnSwipeDown += GameInput_OnSwipeDown;
+        }
         if (PowerUpsManager.Instance != null)
         {
             PowerUpsManager.Instance.OnPowerUpSpeedChangedActivated += PowerUpsManager_OnPowerUpSpeedChangedActivated;
@@ -61,6 +83,18 @@ public class Player : MonoBehaviour
         if (SpeedManager.Instance != null)
         {
             SpeedManager.Instance.OnGameSpeedChanged += SpeedManager_OnGameSpeedChanged;
+            _moveSpeed = SpeedManager.Instance.GetStartingSpeed();
+        }
+        
+        _seedX = Random.value * 100f;
+        _seedY = Random.value * 100f;
+    }
+
+    private void GameInput_OnSwipeDown(object sender, EventArgs e)
+    {
+        if (_isLevitating)
+        {
+            _isLevitatingDown = true;
         }
     }
 
@@ -86,7 +120,7 @@ public class Player : MonoBehaviour
 
     private void GameInput_OnInputPressed(object sender, GameInput.OnInputPressedEventArgs e)
     {
-        
+        if(GameStates.currentGameState != GameStates.GameState.InGame) return;
         if (e.moveDirection == Vector3.right)
         {
             MoveRight();
@@ -112,9 +146,11 @@ public class Player : MonoBehaviour
     
     private void OnTriggerEnter(Collider other)
     {
-        if (other.GetComponent<Obstacle>())
+        if (other.TryGetComponent(out Obstacle obstacle))
         {
+            obstacle.Explode();
             OnGameOver?.Invoke(this, EventArgs.Empty);
+            StartFloating();
             StopPlayer();
         }
 
@@ -150,9 +186,36 @@ public class Player : MonoBehaviour
             powerUp.CollectItem();
         }
     }
+    
+    private void StartFloating()
+    {
+        _startPos = transform.position;
+        StartCoroutine(TransformFloatRoutine());
+    }
+
+    private System.Collections.IEnumerator TransformFloatRoutine()
+    {
+        float elapsed = 0f;
+        while (true)
+        {
+            float t = elapsed * driftSpeed;
+            float x = (Mathf.PerlinNoise(_seedX, t) - 0.5f) * 2f * driftRange;
+            float y = (Mathf.PerlinNoise(_seedY, t) - 0.5f) * 2f * driftRange;
+            transform.position = _startPos + new Vector3(x, y, 0f);
+
+            transform.Rotate(Vector3.forward, rotateSpeed * Time.unscaledDeltaTime);
+
+            elapsed += Time.unscaledDeltaTime; // use unscaled if you pause time
+            yield return null;
+        }
+
+        // optional cleanup
+    }
+
     private void MovePlayer()
     {
-        transform.Translate(moveSpeed * Time.deltaTime, 0, 0);
+        if(GameStates.currentGameState != GameStates.GameState.InGame) return;
+        transform.Translate(_moveSpeed * Time.deltaTime, 0, 0);
     }
     
     private void MoveRight()
@@ -187,24 +250,42 @@ public class Player : MonoBehaviour
     private System.Collections.IEnumerator SlowMotion(float slowMotionDuration, float speed)
     {
         Debug.Log("Slow Motion");
-        float speedBeforeSlowMotion = moveSpeed;
+        float speedBeforeSlowMotion = _moveSpeed;
         float changeLaneSpeedBeforeSlowMotion = changeLaneSpeed;
-        moveSpeed /= (1/speed);
+        _moveSpeed /= (1/speed);
         changeLaneSpeed /= (1/speed);
         yield return new WaitForSeconds(slowMotionDuration);
-        moveSpeed = speedBeforeSlowMotion;
+        _moveSpeed = speedBeforeSlowMotion;
         changeLaneSpeed = changeLaneSpeedBeforeSlowMotion;
     }
 
     private System.Collections.IEnumerator Levitate(float levitateAmount, float timeToLevitate, float levitationDuration, float speed)
     {
-        Debug.Log("Levitating");
+        _isLevitatingUp = true;
+        _isLevitating = false;
+        _isLevitatingDown = false;
         Vector3 targetPosition = new Vector3(transform.position.x, _baseY + levitateAmount, transform.position.z);
         yield return StartCoroutine(LerpToTargetPosition(targetPosition, timeToLevitate, speed));
-        yield return new WaitForSeconds(levitationDuration);
+        _isLevitatingUp = false;
+        _isLevitating = true;
+        _isLevitatingDown = false;
+        //
+        //yield return new WaitForSeconds(levitationDuration);
+        float elapsedTime = 0;
+        while (elapsedTime < levitationDuration)
+        {
+            if(_isLevitatingDown) break;
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        
+        //
+        OnPowerUpLevitatingDown?.Invoke(this, EventArgs.Empty);
         targetPosition = new Vector3(transform.position.x, _baseY, transform.position.z);
         yield return StartCoroutine(LerpToTargetPosition(targetPosition, timeToLevitate, speed));
-        
+        _isLevitatingUp = false;
+        _isLevitating = false;
+        _isLevitatingDown = false;
     }
     
 
@@ -232,10 +313,10 @@ public class Player : MonoBehaviour
         }
         else
             maxSpeed = SpeedManager.Instance.GetMaxPlayerSpeed();
-        if(changeAmount > 0 && moveSpeed >= maxSpeed) return;
-        Debug.Log("Changing Speed from " + moveSpeed + " to");
-        moveSpeed += changeAmount;
-        Debug.Log(moveSpeed);
+        if(changeAmount > 0 && _moveSpeed >= maxSpeed) return;
+        Debug.Log("Changing Speed from " + _moveSpeed + " to");
+        _moveSpeed += changeAmount;
+        Debug.Log(_moveSpeed);
     }
 
     public Vector3 GetPlayerPosition()
@@ -253,6 +334,7 @@ public class Player : MonoBehaviour
         if(GameInput.Instance != null)
         {
             GameInput.Instance.OnInputPressed -= GameInput_OnInputPressed;
+            GameInput.Instance.OnSwipeDown -= GameInput_OnSwipeDown;
         }
         if(PowerUpsManager.Instance != null)
         {

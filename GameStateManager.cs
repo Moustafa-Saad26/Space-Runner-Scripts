@@ -8,7 +8,8 @@ public class GameStateManager : MonoBehaviour
     
     public event EventHandler OnGameLostFocus;
     public event EventHandler OnGameRegainedFocus;
-
+    
+    
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -17,11 +18,11 @@ public class GameStateManager : MonoBehaviour
             return;
         }
         Instance = this;
+        GameStates.currentGameState = GameStates.GameState.Paused;
     }
 
     private void Start()
     {
-        GameStates.currentGameState = GameStates.GameState.InGame;
         if (Player.Instance != null)
         {
             Player.Instance.OnGameOver += Player_OnGameOver;
@@ -29,8 +30,8 @@ public class GameStateManager : MonoBehaviour
 
         if (PausedUI.Instance != null)
         {
-            PausedUI.Instance.onPause += PausedUI_OnPause;
-            PausedUI.Instance.onResume += PausedUI_OnResume;
+            PausedUI.Instance.OnPause += PausedUI_OnPause;
+            PausedUI.Instance.OnResume += PausedUI_OnResume;
         }
     }
     
@@ -72,8 +73,8 @@ public class GameStateManager : MonoBehaviour
             Player.Instance.OnGameOver -= Player_OnGameOver;
         if(PausedUI.Instance != null)
         {
-            PausedUI.Instance.onPause -= PausedUI_OnPause;
-            PausedUI.Instance.onResume -= PausedUI_OnResume;
+            PausedUI.Instance.OnPause -= PausedUI_OnPause;
+            PausedUI.Instance.OnResume -= PausedUI_OnResume;
         }
     }
 }

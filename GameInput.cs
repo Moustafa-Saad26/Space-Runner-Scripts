@@ -14,7 +14,8 @@ public class GameInput : MonoBehaviour
     Vector2 touchDelta;
     
     public event EventHandler<OnInputPressedEventArgs> OnInputPressed;
-    public event EventHandler OnSecondaryButtonPressed;
+    public event EventHandler OnSwipeUp;
+    public event EventHandler OnSwipeDown;
 
     public class OnInputPressedEventArgs : EventArgs
     {
@@ -54,7 +55,7 @@ public class GameInput : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.F))
         {
-            OnSecondaryButtonPressed?.Invoke(this, EventArgs.Empty);
+            OnSwipeUp?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -64,30 +65,30 @@ public class GameInput : MonoBehaviour
         TouchControl touch = Touchscreen.current.primaryTouch;
         if (touch.press.wasPressedThisFrame)
         {
-            Debug.Log("Touch pressed");
+            //Debug.Log("Touch pressed");
             touchStartPosition = touch.position.ReadValue();
         }
 
         if (touch.press.wasReleasedThisFrame)
         {
-            Debug.Log("Touch released");
+            //Debug.Log("Touch released");
             touchEndPosition = touch.position.ReadValue();
             touchDelta = touchEndPosition - touchStartPosition;
-            Debug.Log("Touch Delta: " + touchDelta);
-            Debug.Log("Touch Delta magnitude: " + touchDelta.magnitude);
+            //Debug.Log("Touch Delta: " + touchDelta);
+            //Debug.Log("Touch Delta magnitude: " + touchDelta.magnitude);
             if (touchDelta.magnitude > _MinGap)
             {
-                Debug.Log("more than Gap Threshold");
+               // Debug.Log("more than Gap Threshold");
                 if (Mathf.Abs(touchDelta.x) > Mathf.Abs(touchDelta.y))
                 { 
                     if (touchDelta.x > 0)
                     {
-                        Debug.Log("Swipe Right");
+                        //Debug.Log("Swipe Right");
                         OnInputPressed?.Invoke(this, new OnInputPressedEventArgs { moveDirection = Vector3.right });
                     }
                     else
                     {
-                        Debug.Log("Swipe Left");
+                       // Debug.Log("Swipe Left");
                         OnInputPressed?.Invoke(this, new OnInputPressedEventArgs { moveDirection = Vector3.left });
                     }
                 }
@@ -95,18 +96,18 @@ public class GameInput : MonoBehaviour
                 {
                     if (touchDelta.y > 0)
                     {
-                        Debug.Log("Swipe Up");
-                        OnSecondaryButtonPressed?.Invoke(this, EventArgs.Empty);
+                       // Debug.Log("Swipe Up");
+                        OnSwipeUp?.Invoke(this, EventArgs.Empty);
                     }
                     else
-                    {
-                        Debug.Log("Swipe Down");
+                    { 
+                        OnSwipeDown?.Invoke(this, EventArgs.Empty);
                     }
                 }
             }
             else
             {
-                Debug.Log("Less than Gap Threshold");
+               // Debug.Log("Less than Gap Threshold");
             }
         }
     }

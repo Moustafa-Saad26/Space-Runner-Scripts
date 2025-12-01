@@ -15,7 +15,6 @@ public class MainMenuUI : MonoBehaviour
     
     private void Start()
     {
-        GameStates.currentGameState = GameStates.GameState.MainMenu;
         playButton.onClick.AddListener(PlayPressed);
     }
 
