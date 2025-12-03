@@ -21,20 +21,43 @@ public class PowerUpsManager : MonoBehaviour
     [SerializeField] private float levitationSpeed = 1f;
     private float _levitationTotalDuration;
     
+    [Header("Rocket Configuration")]
+    [SerializeField] private Image rocketImage;
+    [SerializeField] private Rocket rocketPrefab;
+    [SerializeField] private float rocketSpeed = 10f;
+    [SerializeField] private float rocketDuration = 2f;
+    
     [Header("Increase/Decrease Speed Configuration")]
     [SerializeField] private float powerUpIncreaseSpeedAmount = 2f;
     [SerializeField] private float powerUpDecreaseSpeedAmount = 2f;
     
     public event EventHandler<OnSpeedChangedEventArgs> OnPowerUpSpeedChangedActivated;
+    
     public event EventHandler<OnLevitationCollectedEventArgs> OnPowerUpLevitationCollected;
     public event EventHandler<OnLevitationActivatedEventArgs> OnPowerUpLevitationActivated;
+    
     public event EventHandler<OnSlowMotionCollectedEventArgs> OnPowerUpSlowMotionCollected;
     public event EventHandler<OnSlowMotionActivatedEventArgs> OnPowerUpSlowMotionActivated;
+    
+    public event EventHandler<OnRocketCollectedEventArgs> OnPowerUpRocketCollected;
+    public event EventHandler<OnRocketActivatedEventArgs> OnPowerUpRocketActivated;
     
     private PowerUp.PowerUpType _currentPowerUp;
     private int _levitationCount;
     private float _activePowerUpCooldown;
     private bool _isPowerUpActive;
+
+    public class OnRocketActivatedEventArgs : EventArgs
+    {
+        public Rocket rocket;
+        public float rocketSpeed;
+        public float rocketDuration;
+    }
+    
+    public class OnRocketCollectedEventArgs : EventArgs
+    {
+        public Image rocketImage;
+    }
     
     public class OnSpeedChangedEventArgs : EventArgs
     {
@@ -82,6 +105,7 @@ public class PowerUpsManager : MonoBehaviour
             GameInput.Instance.OnSwipeUp += GameInputOnSwipeUp;
         if (levitationImage == null) Debug.LogError("Levitation Image is not set in DifficultyManager");
         if (slowMotionImage == null) Debug.LogError("Slow Motion Image is not set in DifficultyManager");
+        if (rocketImage == null) Debug.LogError("Rocket Image is not set in DifficultyManager");
         _levitationTotalDuration = levitationDuration + (2 * timeToLevitate);
     }
     
@@ -102,7 +126,7 @@ public class PowerUpsManager : MonoBehaviour
         switch (_currentPowerUp)
         {
             case PowerUp.PowerUpType.None:
-                Debug.LogError("No PowerUp Active");
+                //Debug.LogError("No PowerUp Active");
                 break;
             case PowerUp.PowerUpType.SlowMotion:
                 PowerUpSlowMotion();
@@ -116,8 +140,9 @@ public class PowerUpsManager : MonoBehaviour
                 _activePowerUpCooldown = _levitationTotalDuration;
                 _currentPowerUp = PowerUp.PowerUpType.None;
                 break;
-            case PowerUp.PowerUpType.Shield:
-                PowerUpShield();
+            case PowerUp.PowerUpType.Rocket:
+                PowerUpRocket();
+                _currentPowerUp = PowerUp.PowerUpType.None;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -151,12 +176,20 @@ public class PowerUpsManager : MonoBehaviour
             case PowerUp.PowerUpType.Shield:
                 PowerUpShield();
                 break;
+            case PowerUp.PowerUpType.Rocket:
+                _currentPowerUp = PowerUp.PowerUpType.Rocket;
+                OnPowerUpRocketCollected?.Invoke(this, new OnRocketCollectedEventArgs
+                {
+                    rocketImage = rocketImage
+                });
+                break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
     }
 
    
+    
 
     private void PowerUpIncreaseSpeed()
     {
@@ -193,6 +226,16 @@ public class PowerUpsManager : MonoBehaviour
             levitationSpeed = levitationSpeed,
             levitationDuration = levitationDuration,
             timeToLevitate = timeToLevitate
+        });
+    }
+    
+    private void PowerUpRocket()
+    {
+        OnPowerUpRocketActivated?.Invoke(this, new OnRocketActivatedEventArgs
+        {
+            rocket = rocketPrefab,
+            rocketSpeed = rocketSpeed,
+            rocketDuration = rocketDuration
         });
     }
 

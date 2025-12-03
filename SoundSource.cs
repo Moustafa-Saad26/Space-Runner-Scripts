@@ -7,6 +7,10 @@ public class SoundSource : MonoBehaviour
      
      private void Awake()
      {
+          if (GetComponent<AudioSource>() == null)
+          {
+               gameObject.AddComponent<AudioSource>();
+          }
           _audioSource = GetComponent<AudioSource>();
      }
 

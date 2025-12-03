@@ -10,6 +10,7 @@ public class ScoreManager : MonoBehaviour
     
     [SerializeField] private TextMeshProUGUI scoreText;
     private int _score;
+    private int _highScore;
 
 
     private void Awake()
@@ -26,8 +27,25 @@ public class ScoreManager : MonoBehaviour
     {
         if(scoreText == null) Debug.LogError("ScoreText is not set in ScoreManager");
         if(Player.Instance != null)
+        {
             Player.Instance.OnCoinCollected += Player_OnCoinCollected;
+            Player.Instance.OnGameOver += Player_OnGameOver;
+        }
+        
+        _highScore = PlayerPrefs.HasKey(GameStates.HIGH_SCORE) ? PlayerPrefs.GetInt(GameStates.HIGH_SCORE) : 0;
+        
         UpdateScoreText();
+    }
+
+    private void Player_OnGameOver(object sender, EventArgs e)
+    {
+        if (_score > _highScore)
+        {
+            _highScore = _score;
+            PlayerPrefs.SetInt(GameStates.HIGH_SCORE, _highScore);
+            PlayerPrefs.Save();
+        }
+        
     }
 
     private void Player_OnCoinCollected(object sender, Player.OnCoinCollectedEventArgs e)
@@ -39,6 +57,11 @@ public class ScoreManager : MonoBehaviour
     public int GetScore()
     {
         return _score;
+    }
+
+    public int GetHighScore()
+    {
+        return _highScore;
     }
 
     private void IncreaseScore(int value)
@@ -55,6 +78,9 @@ public class ScoreManager : MonoBehaviour
     private void OnDestroy()
     {
         if(Player.Instance != null)
+        {
             Player.Instance.OnCoinCollected -= Player_OnCoinCollected;
+            Player.Instance.OnGameOver -= Player_OnGameOver;
+        }
     }
 }

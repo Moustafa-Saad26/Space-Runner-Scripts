@@ -12,5 +12,6 @@ public static class GameStates
     
     public const string SFX_VOLUME = "SFX_VOLUME";
     public const string MUSIC_VOLUME = "MUSIC_VOLUME";
+    public const string HIGH_SCORE = "HIGH_SCORE";
     
 }

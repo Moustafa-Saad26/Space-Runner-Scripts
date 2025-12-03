@@ -18,14 +18,12 @@ public class Player : MonoBehaviour
     private readonly float[] _lanePositions = {8f, 0, -8f};
     private float _laneChangeTimer;
     private float _baseY;
-    private bool _isLevitatingUp;
     private bool _isLevitating;
     private bool _isLevitatingDown;
     
     [SerializeField] private float driftSpeed = 0.6f;
     [SerializeField] private float driftRange = 10f;
     [SerializeField] private float rotateSpeed = 30f;
-    [SerializeField] private float floatDuration = 20f;
     private Vector3 _startPos;
     private float _seedX;
     private float _seedY;
@@ -78,6 +76,7 @@ public class Player : MonoBehaviour
             PowerUpsManager.Instance.OnPowerUpSpeedChangedActivated += PowerUpsManager_OnPowerUpSpeedChangedActivated;
             PowerUpsManager.Instance.OnPowerUpLevitationActivated += PowerUpsManager_OnPowerUpLevitationActivated;
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated += PowerUpsManager_OnPowerUpSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated += PowerUpsManager_OnRocketActivated;
         }
 
         if (SpeedManager.Instance != null)
@@ -88,6 +87,12 @@ public class Player : MonoBehaviour
         
         _seedX = Random.value * 100f;
         _seedY = Random.value * 100f;
+    }
+
+    private void PowerUpsManager_OnRocketActivated(object sender, PowerUpsManager.OnRocketActivatedEventArgs e)
+    {
+        Rocket rocket = Instantiate(e.rocket, transform.position, Quaternion.identity);
+        rocket.Launch(e.rocketSpeed, e.rocketDuration);
     }
 
     private void GameInput_OnSwipeDown(object sender, EventArgs e)
@@ -261,16 +266,13 @@ public class Player : MonoBehaviour
 
     private System.Collections.IEnumerator Levitate(float levitateAmount, float timeToLevitate, float levitationDuration, float speed)
     {
-        _isLevitatingUp = true;
         _isLevitating = false;
         _isLevitatingDown = false;
         Vector3 targetPosition = new Vector3(transform.position.x, _baseY + levitateAmount, transform.position.z);
         yield return StartCoroutine(LerpToTargetPosition(targetPosition, timeToLevitate, speed));
-        _isLevitatingUp = false;
         _isLevitating = true;
         _isLevitatingDown = false;
-        //
-        //yield return new WaitForSeconds(levitationDuration);
+   
         float elapsedTime = 0;
         while (elapsedTime < levitationDuration)
         {
@@ -279,11 +281,9 @@ public class Player : MonoBehaviour
             yield return null;
         }
         
-        //
         OnPowerUpLevitatingDown?.Invoke(this, EventArgs.Empty);
         targetPosition = new Vector3(transform.position.x, _baseY, transform.position.z);
         yield return StartCoroutine(LerpToTargetPosition(targetPosition, timeToLevitate, speed));
-        _isLevitatingUp = false;
         _isLevitating = false;
         _isLevitatingDown = false;
     }
@@ -341,6 +341,7 @@ public class Player : MonoBehaviour
             PowerUpsManager.Instance.OnPowerUpSpeedChangedActivated -= PowerUpsManager_OnPowerUpSpeedChangedActivated;
             PowerUpsManager.Instance.OnPowerUpLevitationActivated -= PowerUpsManager_OnPowerUpLevitationActivated;
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated -= PowerUpsManager_OnPowerUpSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated -= PowerUpsManager_OnRocketActivated;
         }
         if (SpeedManager.Instance != null)
         {

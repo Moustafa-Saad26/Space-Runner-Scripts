@@ -14,7 +14,8 @@ public class PowerUp : Item
         IncreaseSpeed,
         DecreaseSpeed,
         Levitation,
-        Shield
+        Shield,
+        Rocket
     }
     
     [SerializeField] private PowerUpType powerUpType;
@@ -24,12 +25,7 @@ public class PowerUp : Item
         _collider = GetComponent<BoxCollider>();
     }
 
-    private void Start()
-    {
-        
-       
-    }
-
+    
     public override void CollectItem()
     {
         

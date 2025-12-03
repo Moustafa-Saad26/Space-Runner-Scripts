@@ -11,6 +11,7 @@ public class Block : MonoBehaviour
     
     [SerializeField] private Transform nextBlockSpawnPoint;
     [SerializeField] private List<Transform> itemsSpawnPoints;
+    [SerializeField] private List<Obstacle> obstacles;
     
     [SerializeField] private Transform coinsParent;
     [SerializeField] private Transform powerUpsParent;
@@ -28,10 +29,12 @@ public class Block : MonoBehaviour
         if(itemsSpawnPoints == null || itemsSpawnPoints.Count == 0) Debug.LogError("Item Spawn Points List is Null or Empty in Block");
         if(coinsParent == null) Debug.LogError("Coins Parent is Null or Not Set in Block");
         if(powerUpsParent == null) Debug.LogError("PowerUps Parent is Null or Not Set in Block");
+        if(obstacles == null || obstacles.Count == 0) Debug.LogError("Obstacles List is Null or Empty in Block");
     }
 
     public void SpawnItems()
     {
+        foreach (Obstacle obstacle in obstacles) obstacle.ResetForScene();
         foreach (Transform itemSpawnPoint in itemsSpawnPoints)
         { 
             if(itemSpawnPoint == null) {Debug.LogError("Item Spawn Point is Null or Not Set in Block"); continue;}

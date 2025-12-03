@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using Random = UnityEngine.Random;
+using UnityEngine.SceneManagement;
 
 public class SoundManager : MonoBehaviour
 {
@@ -16,6 +16,7 @@ public class SoundManager : MonoBehaviour
     [SerializeField] private AudioClip slowMoSound;
     [SerializeField] private AudioClip levitateUpSound;
     [SerializeField] private AudioClip levitateDownSound;
+    [SerializeField] private AudioClip rocketSound;
     
     
     
@@ -76,14 +77,15 @@ public class SoundManager : MonoBehaviour
         {
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated += PowerUpsManager_OnSlowMotionActivated;
             PowerUpsManager.Instance.OnPowerUpLevitationActivated += PowerUpsManager_OnPowerUpLevitationActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated += PowerUpsManager_OnRocketActivated;
         }
 
         if (PausedUI.Instance != null)
         {
             PausedUI.Instance.OnPause += PausedUI_OnPause;
             PausedUI.Instance.OnResume += PausedUI_OnResume;
-            PausedUI.Instance.OnMusicChanged += PausedUI_OnMusicChanged;
-            PausedUI.Instance.OnSFXChanged += PausedUI_OnSFXChanged;
+            PausedUI.Instance.OnMusicChanged += Settings_OnMusicChanged;
+            PausedUI.Instance.OnSFXChanged += Settings_OnSFXChanged;
         }
 
         if (GameStateManager.Instance != null)
@@ -91,10 +93,37 @@ public class SoundManager : MonoBehaviour
             GameStateManager.Instance.OnGameLostFocus += GameStateManager_OnGameLostFocus;
             GameStateManager.Instance.OnGameRegainedFocus += GameStateManager_OnGameRegainedFocus;
         }
-        PlayEngineSound();
+
+        if (MainMenuUI.Instance != null)
+        {
+            MainMenuUI.Instance.OnMusicChanged += Settings_OnMusicChanged;
+            MainMenuUI.Instance.OnSFXChanged += Settings_OnSFXChanged;
+        }
+        
+        Obstacle.OnObstacleExploded += Obstacle_OnObstacleExploded;
+        if (SceneManager.GetActiveScene().name == nameof(Loader.Scene.GameScene))
+        {
+            PlayEngineSound();
+        }
         PlaySoundtrack();
         AudioListener.pause = false;
         AudioListener.volume = 1f;
+    }
+
+    private void Obstacle_OnObstacleExploded(object sender, EventArgs e)
+    {
+        SoundSource audioSource = AudioPoolManager.Instance.GetObject();
+        audioSource.transform.SetParent(transform);
+        audioSource.PlaySound2D(explosionSound, _sfxVolume);
+        AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 2f);
+    }
+
+    private void PowerUpsManager_OnRocketActivated(object sender, PowerUpsManager.OnRocketActivatedEventArgs e)
+    {
+        SoundSource audioSource = AudioPoolManager.Instance.GetObject();
+        audioSource.transform.SetParent(transform);
+        audioSource.PlaySound2D(rocketSound, _sfxVolume);
+        AudioPoolManager.Instance.ReturnObjectAfter(audioSource, e.rocketDuration + 2f);
     }
 
     private void Player_OnLevitatingDown(object sender, EventArgs e)
@@ -106,12 +135,12 @@ public class SoundManager : MonoBehaviour
     }
 
 
-    private void PausedUI_OnSFXChanged(object sender, EventArgs e)
+    private void Settings_OnSFXChanged(object sender, EventArgs e)
     {
         ChangeSFXVolume();
     }
 
-    private void PausedUI_OnMusicChanged(object sender, EventArgs e)
+    private void Settings_OnMusicChanged(object sender, EventArgs e)
     {
         ChangeMusicVolume();
     }
@@ -159,13 +188,7 @@ public class SoundManager : MonoBehaviour
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
         audioSource.PlaySound2D(gameOverSound, _sfxVolume);
-        
-        SoundSource audioSource2 = AudioPoolManager.Instance.GetObject();
-        audioSource2.transform.SetParent(transform);
-        audioSource2.PlaySound2D(explosionSound, _sfxVolume);
-        
         AudioPoolManager.Instance.ReturnObjectAfter(audioSource, 2f);
-        AudioPoolManager.Instance.ReturnObjectAfter(audioSource2, 2f);
     }
 
     private void Player_OnPowerUpCollected(object sender, Player.OnPowerUpCollectedEventArgs e)
@@ -203,6 +226,13 @@ public class SoundManager : MonoBehaviour
 
     private void PlaySoundtrack()
     {
+        if (AudioPoolManager.Instance == null)
+        {
+            SoundSource soundSource = gameObject.AddComponent<SoundSource>();
+            _musicSoundSource = soundSource;
+            soundSource.PlaySound2DLooped(soundtrack, _musicVolume);
+            return;
+        }
         SoundSource audioSource = AudioPoolManager.Instance.GetObject();
         audioSource.transform.SetParent(transform);
         _musicSoundSource = audioSource;
@@ -217,7 +247,7 @@ public class SoundManager : MonoBehaviour
         {
             _sfxVolume = 0f;
         }
-        _engineSoundSource.changeVolume(_sfxVolume);
+        _engineSoundSource?.changeVolume(_sfxVolume);
         OnVolumeUpdate?.Invoke(this, new OnVolumeEventArgs {musicVolume = _musicVolume * 10, sfxVolume = _sfxVolume * 10});
         
         PlayerPrefs.SetFloat(GameStates.SFX_VOLUME, _sfxVolume);
@@ -252,18 +282,27 @@ public class SoundManager : MonoBehaviour
         {
             PowerUpsManager.Instance.OnPowerUpSlowMotionActivated -= PowerUpsManager_OnSlowMotionActivated;
             PowerUpsManager.Instance.OnPowerUpLevitationActivated -= PowerUpsManager_OnPowerUpLevitationActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated -= PowerUpsManager_OnRocketActivated;
         }
         if(PausedUI.Instance != null)
         {
             PausedUI.Instance.OnPause -= PausedUI_OnPause;
             PausedUI.Instance.OnResume -= PausedUI_OnResume;
-            PausedUI.Instance.OnMusicChanged -= PausedUI_OnMusicChanged;
-            PausedUI.Instance.OnSFXChanged -= PausedUI_OnSFXChanged;
+            PausedUI.Instance.OnMusicChanged -= Settings_OnMusicChanged;
+            PausedUI.Instance.OnSFXChanged -= Settings_OnSFXChanged;
         }
         if(GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnGameLostFocus -= GameStateManager_OnGameLostFocus;
             GameStateManager.Instance.OnGameRegainedFocus -= GameStateManager_OnGameRegainedFocus;
         }
+
+        if (MainMenuUI.Instance != null)
+        {
+            MainMenuUI.Instance.OnMusicChanged -= Settings_OnMusicChanged;
+            MainMenuUI.Instance.OnSFXChanged -= Settings_OnSFXChanged;
+        }
+        
+        Obstacle.OnObstacleExploded -= Obstacle_OnObstacleExploded;
     }
 }

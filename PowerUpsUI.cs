@@ -16,16 +16,20 @@ public class PowerUpsUI : MonoBehaviour
     
     private bool _isLevitating;
     private bool _isSlowMotion;
+    
+    
     private void Start()
     {
         if(progressCircleRect == null) Debug.LogError("Levitation Progress Rect is not set in PowerUpsUI");
         if(progressCircle == null) Debug.LogError("Levitation Progress Circle is not set in PowerUpsUI");
         if (PowerUpsManager.Instance != null)
         {
-            PowerUpsManager.Instance.OnPowerUpLevitationCollected += DifficultyManagerOnPowerUpLevitationCollected;
-            PowerUpsManager.Instance.OnPowerUpLevitationActivated += DifficultyManagerOnPowerUpLevitationActivated;
-            PowerUpsManager.Instance.OnPowerUpSlowMotionCollected += DifficultyManagerOnPowerUpSlowMotionCollected;
-            PowerUpsManager.Instance.OnPowerUpSlowMotionActivated += DifficultyManagerOnPowerUpSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpLevitationCollected += PowerUpsManager_OnLevitationCollected;
+            PowerUpsManager.Instance.OnPowerUpLevitationActivated += PowerUpsManager_OnLevitationActivated;
+            PowerUpsManager.Instance.OnPowerUpSlowMotionCollected += PowerUpsManager_OnSlowMotionCollected;
+            PowerUpsManager.Instance.OnPowerUpSlowMotionActivated += PowerUpsManager_OnSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketCollected += PowerUpsManager_OnRocketCollected;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated += PowerUpsManager_OnRocketActivated;
         }
 
         if (Player.Instance != null)
@@ -34,14 +38,7 @@ public class PowerUpsUI : MonoBehaviour
         }
         HideProgressCircle();
     }
-
-    private void Player_OnLevitatingDown(object sender, EventArgs e)
-    {
-        _isLevitating = false;
-        HideProgressCircle();
-        ResetTimers();
-        ResetBools();
-    }
+    
 
     private void Update()
     {
@@ -59,14 +56,34 @@ public class PowerUpsUI : MonoBehaviour
             StartProgressCircle();
         }
     }
+    private void PowerUpsManager_OnRocketCollected(object sender, PowerUpsManager.OnRocketCollectedEventArgs e)
+    {
+        DestroyAnyPowerImage();
+        Image rocketImage = Instantiate(e.rocketImage, powerUpHolderRect);
+    }
+    
+    private void PowerUpsManager_OnRocketActivated(object sender, PowerUpsManager.OnRocketActivatedEventArgs e)
+    {
+        DestroyAnyPowerImage();
+    }
 
-    private void DifficultyManagerOnPowerUpLevitationCollected(object sender, PowerUpsManager.OnLevitationCollectedEventArgs e)
+    private void Player_OnLevitatingDown(object sender, EventArgs e)
+    {
+        _isLevitating = false;
+        HideProgressCircle();
+        ResetTimers();
+        ResetBools();
+    }
+
+   
+
+    private void PowerUpsManager_OnLevitationCollected(object sender, PowerUpsManager.OnLevitationCollectedEventArgs e)
     {
         DestroyAnyPowerImage();
         Image levitationImage = Instantiate(e.levitationImage, powerUpHolderRect);
     }
     
-    private void DifficultyManagerOnPowerUpLevitationActivated(object sender, PowerUpsManager.OnLevitationActivatedEventArgs e)
+    private void PowerUpsManager_OnLevitationActivated(object sender, PowerUpsManager.OnLevitationActivatedEventArgs e)
     {
         _maxDuration = e.levitationDuration;
         _timeToLevitate = e.timeToLevitate;
@@ -76,12 +93,12 @@ public class PowerUpsUI : MonoBehaviour
     
     
     
-    private void DifficultyManagerOnPowerUpSlowMotionCollected(object sender, PowerUpsManager.OnSlowMotionCollectedEventArgs e)
+    private void PowerUpsManager_OnSlowMotionCollected(object sender, PowerUpsManager.OnSlowMotionCollectedEventArgs e)
     {
         DestroyAnyPowerImage();
         Image slowMoImage = Instantiate(e.slowMotionImage, powerUpHolderRect);
     }
-    private void DifficultyManagerOnPowerUpSlowMotionActivated(object sender, PowerUpsManager.OnSlowMotionActivatedEventArgs e)
+    private void PowerUpsManager_OnSlowMotionActivated(object sender, PowerUpsManager.OnSlowMotionActivatedEventArgs e)
     {
         _maxDuration = e.slowMotionDuration;
         _isSlowMotion = true;
@@ -143,10 +160,13 @@ public class PowerUpsUI : MonoBehaviour
     {
         if(PowerUpsManager.Instance != null)
         {
-            PowerUpsManager.Instance.OnPowerUpLevitationCollected -= DifficultyManagerOnPowerUpLevitationCollected;
-            PowerUpsManager.Instance.OnPowerUpLevitationActivated -= DifficultyManagerOnPowerUpLevitationActivated;
-            PowerUpsManager.Instance.OnPowerUpSlowMotionCollected -= DifficultyManagerOnPowerUpSlowMotionCollected;
-            PowerUpsManager.Instance.OnPowerUpSlowMotionActivated -= DifficultyManagerOnPowerUpSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpLevitationCollected -= PowerUpsManager_OnLevitationCollected;
+            PowerUpsManager.Instance.OnPowerUpLevitationActivated -= PowerUpsManager_OnLevitationActivated;
+            PowerUpsManager.Instance.OnPowerUpSlowMotionCollected -= PowerUpsManager_OnSlowMotionCollected;
+            PowerUpsManager.Instance.OnPowerUpSlowMotionActivated -= PowerUpsManager_OnSlowMotionActivated;
+            PowerUpsManager.Instance.OnPowerUpRocketCollected -= PowerUpsManager_OnRocketCollected;
+            Player.Instance.OnPowerUpLevitatingDown -= Player_OnLevitatingDown;
+            PowerUpsManager.Instance.OnPowerUpRocketActivated -= PowerUpsManager_OnRocketActivated;
         }
     }
 }

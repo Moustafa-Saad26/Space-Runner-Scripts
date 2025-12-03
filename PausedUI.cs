@@ -20,11 +20,15 @@ public class PausedUI : MonoBehaviour
     [SerializeField] private Button changeSFXButton;
     [SerializeField] private TextMeshProUGUI changeSFXText;
     [SerializeField] private GameObject tutorialMenu;
+    [SerializeField] private TextMeshProUGUI highScoreText;
+    
+    private bool _isTutorialActive = true;
 
     public event EventHandler OnPause;
     public event EventHandler OnResume;
     public event EventHandler OnMusicChanged;
     public event EventHandler OnSFXChanged;
+    public event EventHandler OnTutorialFinished;
 
     private void Awake()
     {
@@ -65,6 +69,9 @@ public class PausedUI : MonoBehaviour
         settingsRestartButton.onClick.AddListener(RestartPressed);
         changeMusicButton.onClick.AddListener(ChangeMusicVolumePressed);
         changeSFXButton.onClick.AddListener(ChangeSFXVolumePressed);
+        
+        highScoreText.gameObject.SetActive(false);
+        
         if (Player.Instance != null)
         {
             Player.Instance.OnGameOver += Player_OnGameOver;
@@ -97,7 +104,9 @@ public class PausedUI : MonoBehaviour
 
     private void GameInput_OnSwipeUp(object sender, EventArgs e)
     {
-        GameStates.currentGameState = GameStates.GameState.InGame;
+        if(!_isTutorialActive) return;
+        OnTutorialFinished?.Invoke(this, EventArgs.Empty);
+        _isTutorialActive = false;
         tutorialMenu.SetActive(false);
     }
 
@@ -149,7 +158,6 @@ public class PausedUI : MonoBehaviour
 
     private void PausePressed()
     {
-        GameStates.currentGameState = GameStates.GameState.Paused;
         pauseButton.gameObject.SetActive(false);
         settingsMenu.SetActive(false);
         pauseMenu.SetActive(true);
@@ -169,7 +177,7 @@ public class PausedUI : MonoBehaviour
     }
     private void Player_OnGameOver(object sender, EventArgs e)
     {
-        GameStates.currentGameState = GameStates.GameState.GameOver; 
+        GameStates.currentGameState = GameStates.GameState.GameOver;
         StartCoroutine(DelayedGameOverUI(2.5f));
         
     }
@@ -179,6 +187,8 @@ public class PausedUI : MonoBehaviour
         yield return new WaitForSeconds(seconds);
         pauseMenu.SetActive(true);
         resumeButton.gameObject.SetActive(false);
+        highScoreText.gameObject.SetActive(true);
+        highScoreText.text = "High Score: " + ScoreManager.Instance.GetHighScore();
     }
 
     private void RestartPressed()

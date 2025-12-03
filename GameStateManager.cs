@@ -32,8 +32,16 @@ public class GameStateManager : MonoBehaviour
         {
             PausedUI.Instance.OnPause += PausedUI_OnPause;
             PausedUI.Instance.OnResume += PausedUI_OnResume;
+            PausedUI.Instance.OnTutorialFinished += PausedUI_OnTutorialFinished;
         }
     }
+
+    private void PausedUI_OnTutorialFinished(object sender, EventArgs e)
+    {
+        GameStates.currentGameState = GameStates.GameState.InGame;
+    }
+
+    
     
     private void OnApplicationPause(bool pauseStatus)
     {
@@ -41,12 +49,10 @@ public class GameStateManager : MonoBehaviour
         {
             OnGameLostFocus?.Invoke(this, EventArgs.Empty);
             Time.timeScale = 0f;
-            Debug.Log("Game paused because app lost focus.");
         }
         else
         {
             OnGameRegainedFocus?.Invoke(this, EventArgs.Empty);
-            Debug.Log("Game Regained Focus.");
         }
     }
 
@@ -75,6 +81,7 @@ public class GameStateManager : MonoBehaviour
         {
             PausedUI.Instance.OnPause -= PausedUI_OnPause;
             PausedUI.Instance.OnResume -= PausedUI_OnResume;
+            PausedUI.Instance.OnTutorialFinished -= PausedUI_OnTutorialFinished;
         }
     }
 }
